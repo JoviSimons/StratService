@@ -18,7 +18,7 @@ jobs:
     - name: Publish to Docker Hub
       uses: docker/build-push-action@v1
       with:
-        username: "Stockbrood"
+        username: "stockbrood"
         password: "Stockbrood"
-        repository: Stockbrood/strat_service
+        repository: stockbrood/strat_service
         tags: latest
