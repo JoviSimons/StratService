@@ -95,6 +95,6 @@ func newClient() (value mongo.Client) {
 		panic(err)
 	}
 	value = *client
-
+	
 	return
 }
