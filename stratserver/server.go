@@ -4,9 +4,13 @@ import (
 	"context"
 	"fmt"
 	"github.com/S-A-RB05/StratService/proto"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"net"
 	"os"
@@ -17,26 +21,74 @@ type StratServiceServer struct {
 	proto.UnimplementedStratServiceServer
 }
 
-func (s StratServiceServer) mustEmbedUnimplementedStratServiceServer() {
-}
-
 func (s StratServiceServer) ReturnAll(req *proto.ReturnAllReq, server proto.StratService_ReturnAllServer) error {
-	//TODO implement me
-	panic("implement me")
+	data := &StratItem{}
+	cursor, err := stratdb.Find(context.Background(), bson.M{})
+	if err != nil {
+		return status.Errorf(codes.Internal, fmt.Sprintf("Unknown internal error: %v", err))
+	}
+	defer cursor.Close(context.Background())
+	for cursor.Next(context.Background()) {
+		err := cursor.Decode(data)
+		if err != nil {
+			return status.Errorf(codes.Unavailable, fmt.Sprintf("Could not decode data: %v", err))
+		}
+		server.Send(&proto.ReturnAllRes{
+			Strategy: &proto.Strategy{
+				Name:    data.Name,
+				Mq:      data.Mq,
+				Ex:      data.Ex,
+				Created: data.Created,
+			},
+		})
+	}
+	if err := cursor.Err(); err != nil {
+		return status.Errorf(codes.Internal, fmt.Sprintf("Unknown cursor error: %v", err))
+	}
+	return nil
 }
 
 func (s StratServiceServer) ReturnStrat(ctx context.Context, req *proto.ReturnStratReq) (*proto.ReturnStratRes, error) {
-	//TODO implement me
-	panic("implement me")
+	result := stratdb.FindOne(ctx, bson.M{"_name": req.GetName()})
+	data := StratItem{}
+	if err := result.Decode(&data); err != nil {
+		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Could not find Strategy with name %s: %v", req.GetName(), err))
+	}
+	response := &proto.ReturnStratRes{
+		Strategy: &proto.Strategy{
+			Name:    data.Name,
+			Mq:      data.Mq,
+			Ex:      data.Ex,
+			Created: data.Created,
+		},
+	}
+	return response, nil
 }
 
 func (s StratServiceServer) StoreStrat(ctx context.Context, req *proto.StoreStratReq) (*proto.StoreStratRes, error) {
-	//TODO implement me
-	panic("implement me")
+	strategy := req.GetStrategy()
+	data := StratItem{
+		Name:    strategy.GetName(),
+		Mq:      strategy.GetMq(),
+		Ex:      strategy.GetEx(),
+		Created: strategy.GetCreated(),
+	}
+	err, _ := stratdb.InsertOne(mongoCtx, data)
+	if err != nil {
+		return nil, status.Errorf(
+			codes.Internal,
+			fmt.Sprintf("Internal error: %v", err),
+		)
+	}
+	return &proto.StoreStratRes{Strategy: strategy}, nil
 }
 
+// StratItem pointer at timestamppb possibly a problem
 type StratItem struct {
-	Name string `bson:""`
+	Name    string                 `bson:"_name,omitempty"`
+	Mq      string                 `bson:"mq"`
+	Ex      string                 `bson:"ex"`
+	Created *timestamppb.Timestamp `bson:"created"`
 }
 
 var db *mongo.Client
@@ -94,18 +146,12 @@ func InitGRPC() {
 	}()
 	fmt.Println("Server succesfully started on port :50051")
 
-	// Right way to stop the server using a SHUTDOWN HOOK
-	// Create a channel to receive OS signals
 	c := make(chan os.Signal)
-
-	// Relay os.Interrupt to our channel (os.Interrupt = CTRL+C)
-	// Ignore other incoming signals
 	signal.Notify(c, os.Interrupt)
 
 	// Block main routine until a signal is received
 	// As long as user doesn't press CTRL+C a message is not passed and our main routine keeps running
 	<-c
-
 	// After receiving CTRL+C Properly stop the server
 	fmt.Println("\nStopping the server...")
 	s.Stop()

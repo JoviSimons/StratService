@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/rabbitmq/amqp091-go v1.8.0
-	go.mongodb.org/mongo-driver v1.11.2
+	go.mongodb.org/mongo-driver v1.11.4
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.30.0
 )
