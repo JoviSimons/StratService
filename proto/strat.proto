@@ -1,0 +1,43 @@
+syntax = "proto3";
+package proto;
+option go_package = "/proto";
+
+import "google/protobuf/timestamp.proto";
+
+service StratService {
+  rpc returnAll(ReturnAllReq) returns (stream ReturnAllRes);
+  rpc returnStrat(ReturnStratReq) returns(ReturnStratRes);
+  rpc storeStrat(StoreStratReq) returns(StoreStratRes);
+}
+
+message Strategy{
+  string name = 1;
+  string mq = 2;
+  string ex = 3;
+  google.protobuf.Timestamp created = 4;
+}
+
+//return all strats
+message ReturnAllReq{}
+
+message ReturnAllRes{
+  Strategy strategy = 1;
+}
+
+//return single strat
+message ReturnStratReq{
+  string name = 1;
+}
+
+message ReturnStratRes{
+  Strategy strategy = 1;
+}
+
+//create strat
+message StoreStratReq{
+  Strategy strategy = 1;
+}
+
+message StoreStratRes{
+  Strategy strategy = 1;
+}
