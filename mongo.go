@@ -20,14 +20,14 @@ var client mongo.Client = newClient()
 func insertStrat(strat Strategy, w http.ResponseWriter) {
 	stratCollection := client.Database("testing").Collection("strategies")
 	strat.Created = time.Now()
-	_, err := stratCollection.InsertOne(context.TODO(), strat)
+	result, err := stratCollection.InsertOne(context.TODO(), strat)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	// return the ID of the newly inserted script
-	fmt.Fprintf(w, "New strategy inserted named: %s", strat.Name)
+	fmt.Fprint(w, result.InsertedID.(primitive.ObjectID).Hex())
 }
 
 //----Read----
