@@ -13,8 +13,8 @@ import (
 )
 
 func main() {
-	handleRequests()
 	testListener()
+	handleRequests()
 }
 
 func testListener() {
