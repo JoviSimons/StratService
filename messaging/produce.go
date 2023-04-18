@@ -8,7 +8,7 @@ import (
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
-func ProduceMessage(message string, queue string) {
+func ProduceMessage(message []byte, queue string) {
 	conn, err := amqp.Dial("amqps://tnhdeowx:tInXH7wKtKdyn-v97fZ_HGM5XmHsDTNl@rattlesnake.rmq.cloudamqp.com/tnhdeowx")
 	FailOnError(err, "Failed to connect to RabbitMQ")
 	defer conn.Close()
@@ -30,7 +30,7 @@ func ProduceMessage(message string, queue string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	body := []byte(message)
+	body := message
 
 	// Publish the message to the queue
 	err = ch.PublishWithContext(ctx,
