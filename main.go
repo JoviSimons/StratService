@@ -13,13 +13,7 @@ import (
 )
 
 func main() {
-	testListener()
 	handleRequests()
-}
-
-func testListener() {
-	fmt.Println("consuming")
-	messaging.ConsumeMessage("q.getStrat")
 }
 
 //controllers
@@ -59,7 +53,7 @@ func useStrat(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("USING STRAT:")
 	fmt.Println(s.Name)
 	// Send script using rabbitmq
-	messaging.ProduceMessage(s.Mq, "strat_queue")
+	//messaging.ProduceMessage(s.Mq, "strat_queue")
 }
 
 func handleRequests() {
@@ -91,6 +85,14 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 
 	// insert the strategy into the database
 	insertStrat(strat, w)
+
+	// Marshal the struct into a byte slice
+	bStrat, err := json.Marshal(w)
+	if err != nil {
+		panic(err)
+	}
+
+	messaging.ProduceMessage(bStrat, "q.syncStrat")
 
 }
 
