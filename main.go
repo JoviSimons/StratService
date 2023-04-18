@@ -17,9 +17,9 @@ func main() {
 	testListener()
 }
 
-func testListener(){
+func testListener() {
+	fmt.Println("consuming")
 	messaging.ConsumeMessage("q.getStrat")
-	
 }
 
 //controllers
