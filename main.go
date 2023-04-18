@@ -14,6 +14,12 @@ import (
 
 func main() {
 	handleRequests()
+	testListener()
+}
+
+func testListener(){
+	messaging.ConsumeMessage("q.getStrat")
+	
 }
 
 //controllers
