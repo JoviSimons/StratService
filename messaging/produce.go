@@ -30,7 +30,7 @@ func ProduceMessage(message []byte, queue string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	body := []byte(message)
+	body := message
 
 	// Publish the message to the queue
 	err = ch.PublishWithContext(ctx,

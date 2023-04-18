@@ -87,7 +87,7 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 	insertStrat(strat, w)
 
 	// Marshal the struct into a byte slice
-	bStrat, err := json.Marshal(w)
+	bStrat, err := json.Marshal(strat)
 	if err != nil {
 		panic(err)
 	}
