@@ -76,7 +76,7 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 	// parse the request body into a Strategy struct
 	var strat Strategy
 	err := json.NewDecoder(body).Decode(&strat)
-	fmt.Println(body)
+	fmt.Println(strat)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		fmt.Println(err)
@@ -84,7 +84,7 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// insert the strategy into the database
-	insertStrat(strat, w)
+	fmt.Fprint(w, insertStrat(strat));
 
 	// Marshal the struct into a byte slice
 	bStrat, err := json.Marshal(strat)
