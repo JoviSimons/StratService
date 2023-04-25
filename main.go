@@ -83,7 +83,7 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var strat_id string = insertStrat(strat)
+	var strat_id = insertStrat(strat)
 	// insert the strategy into the database
 	fmt.Fprint(w, strat_id)
 
@@ -93,7 +93,7 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 func sendStratToTestManager(id string, strat Strategy) {
 	var rStrat StrategyRequest
 
-	rStrat._id = id
+	rStrat.Id = id
 	rStrat.Ex = strat.Ex
 	rStrat.Name = strat.Name
 	rStrat.Created = strat.Created

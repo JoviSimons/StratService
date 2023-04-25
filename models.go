@@ -12,7 +12,7 @@ type Strategy struct {
 }
 
 type StrategyRequest struct {
-	_id     string    `json:"id"`
+	Id     string    `json:"id"`
 	Name    string    `json:"name"`
 	Ex      string    `json:"ex"`
 	Created time.Time `json:"created"`
