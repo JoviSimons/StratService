@@ -83,17 +83,28 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var strat_id string = insertStrat(strat)
 	// insert the strategy into the database
-	fmt.Fprint(w, insertStrat(strat));
+	fmt.Fprint(w, strat_id)
+
+	sendStratToTestManager(strat_id, strat)
+}
+
+func sendStratToTestManager(id string, strat Strategy) {
+	var rStrat StrategyRequest
+
+	rStrat._id = id
+	rStrat.Ex = strat.Ex
+	rStrat.Name = strat.Name
+	rStrat.Created = strat.Created
 
 	// Marshal the struct into a byte slice
-	bStrat, err := json.Marshal(strat)
+	bStrat, err := json.Marshal(rStrat)
 	if err != nil {
 		panic(err)
 	}
 
 	messaging.ProduceMessage(bStrat, "q.syncStrat")
-
 }
 
 //service functions
