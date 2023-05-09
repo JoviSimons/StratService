@@ -5,6 +5,7 @@ import (
 )
 
 type Strategy struct {
+	UserId	string	`json:"userid"`
 	Name    string    `json:"name"`
 	Mq      string    `json:"mq"`
 	Ex      string    `json:"ex"`
