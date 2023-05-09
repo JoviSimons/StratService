@@ -53,7 +53,7 @@ func useStrat(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("USING STRAT:")
 	fmt.Println(s.Name)
 	// Send script using rabbitmq
-	messaging.ProduceMessage(s.Mq, "strat_queue")
+	//messaging.ProduceMessage(s.Mq, "strat_queue")
 }
 
 func handleRequests() {
@@ -76,16 +76,35 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 	// parse the request body into a Strategy struct
 	var strat Strategy
 	err := json.NewDecoder(body).Decode(&strat)
-	fmt.Println(body)
+	fmt.Println(strat)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		fmt.Println(err)
 		return
 	}
 
+	var strat_id = insertStrat(strat)
 	// insert the strategy into the database
-	insertStrat(strat, w)
+	fmt.Fprint(w, strat_id)
 
+	sendStratToTestManager(strat_id, strat)
+}
+
+func sendStratToTestManager(id string, strat Strategy) {
+	var rStrat StrategyRequest
+
+	rStrat.Id = id
+	rStrat.Ex = strat.Ex
+	rStrat.Name = strat.Name
+	rStrat.Created = strat.Created
+
+	// Marshal the struct into a byte slice
+	bStrat, err := json.Marshal(rStrat)
+	if err != nil {
+		panic(err)
+	}
+
+	messaging.ProduceMessage(bStrat, "q.syncStrat")
 }
 
 //service functions

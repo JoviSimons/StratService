@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -17,17 +16,17 @@ import (
 var client mongo.Client = newClient()
 
 // ----Create----
-func insertStrat(strat Strategy, w http.ResponseWriter) {
+func insertStrat(strat Strategy) (writeValue string) {
 	stratCollection := client.Database("testing").Collection("strategies")
 	strat.Created = time.Now()
 	result, err := stratCollection.InsertOne(context.TODO(), strat)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		panic(err);
 	}
 
 	// return the ID of the newly inserted script
-	fmt.Fprint(w, result.InsertedID.(primitive.ObjectID).Hex())
+	writeValue = result.InsertedID.(primitive.ObjectID).Hex();
+	return writeValue;
 }
 
 //----Read----
