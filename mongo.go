@@ -21,12 +21,12 @@ func insertStrat(strat Strategy) (writeValue string) {
 	strat.Created = time.Now()
 	result, err := stratCollection.InsertOne(context.TODO(), strat)
 	if err != nil {
-		panic(err);
+		panic(err)
 	}
 
 	// return the ID of the newly inserted script
-	writeValue = result.InsertedID.(primitive.ObjectID).Hex();
-	return writeValue;
+	writeValue = result.InsertedID.(primitive.ObjectID).Hex()
+	return writeValue
 }
 
 //----Read----
@@ -94,6 +94,6 @@ func newClient() (value mongo.Client) {
 		panic(err)
 	}
 	value = *client
-	
+
 	return
 }

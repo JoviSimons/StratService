@@ -98,7 +98,6 @@ var mongoCtx context.Context
 func InitGRPC() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	fmt.Println("Starting server on port: 50051")
-
 	listener, err := net.Listen("tcp", ":50051")
 	if err != nil {
 		log.Fatalf("Unable to listen on port :50051: %v", err)
@@ -111,30 +110,7 @@ func InitGRPC() {
 	srv := &StratServiceServer{}
 	proto.RegisterStratServiceServer(s, srv)
 
-	// Initialize MongoDb client
-	fmt.Println("Connecting to MongoDB...")
-
-	// non-nil empty context
-	mongoCtx = context.Background()
-
-	// Connect takes in a context and options, the connection URI is the only option we pass for now
-	// mongodb+srv://stockbrood:admin@stockbrood.sifn3lq.mongodb.net/test
-	db, err = mongo.Connect(mongoCtx, options.Client().ApplyURI("mongodb+srv://stockbrood:admin@stockbrood.sifn3lq.mongodb.net/test"))
-	// Handle potential errors
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Check whether the connection was succesful by pinging the MongoDB server
-	err = db.Ping(mongoCtx, nil)
-	if err != nil {
-		log.Fatalf("Could not connect to MongoDB: %v\n", err)
-	} else {
-		fmt.Println("Connected to Mongodb")
-	}
-
-	// Bind our collection to our global variable for use in other methods
-	stratdb = db.Database("testing").Collection("strategies")
+	InitMongo()
 
 	// Start the server in a child routine
 	go func() {
@@ -157,4 +133,32 @@ func InitGRPC() {
 	fmt.Println("Closing MongoDB connection")
 	db.Disconnect(mongoCtx)
 	fmt.Println("Done.")
+}
+
+func InitMongo() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// Initialize MongoDb client
+	fmt.Println("Connecting to MongoDB...")
+
+	// non-nil empty context
+	mongoCtx = context.Background()
+
+	// Connect takes in a context and options, the connection URI is the only option we pass for now
+	// mongodb+srv://stockbrood:admin@stockbrood.sifn3lq.mongodb.net/test
+	db, err := mongo.Connect(mongoCtx, options.Client().ApplyURI("mongodb+srv://stockbrood:admin@stockbrood.sifn3lq.mongodb.net/test"))
+	// Handle potential errors
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Check whether the connection was succesful by pinging the MongoDB server
+	err = db.Ping(mongoCtx, nil)
+	if err != nil {
+		log.Fatalf("Could not connect to MongoDB: %v\n", err)
+	} else {
+		fmt.Println("Connected to Mongodb")
+	}
+
+	// Bind our collection to our global variable for use in other methods
+	stratdb = db.Database("testing").Collection("strategies")
 }
