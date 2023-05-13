@@ -19,8 +19,8 @@ message Strategy{
 }
 
 message StrategyRequest{
-  string name = 1;
-  string mq = 2;
+  string id = 1;
+  string name = 2;
   string ex = 3;
   google.protobuf.Timestamp created = 4;
 }
