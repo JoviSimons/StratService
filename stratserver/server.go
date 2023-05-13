@@ -108,9 +108,7 @@ func InitGRPC() {
 	var opts []grpc.ServerOption
 	// Create new gRPC server with (blank) options
 	s := grpc.NewServer(opts...)
-	// Create BlogService type
 	srv := &StratServiceServer{}
-	// Register the service with the server
 	proto.RegisterStratServiceServer(s, srv)
 
 	// Initialize MongoDb client
@@ -121,7 +119,7 @@ func InitGRPC() {
 
 	// Connect takes in a context and options, the connection URI is the only option we pass for now
 	// mongodb+srv://stockbrood:admin@stockbrood.sifn3lq.mongodb.net/test
-	db, err = mongo.Connect(mongoCtx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	db, err = mongo.Connect(mongoCtx, options.Client().ApplyURI("mongodb+srv://stockbrood:admin@stockbrood.sifn3lq.mongodb.net/test"))
 	// Handle potential errors
 	if err != nil {
 		log.Fatal(err)
