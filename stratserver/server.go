@@ -24,7 +24,7 @@ type StratServiceServer struct {
 	proto.UnimplementedStratServiceServer
 }
 
-func (s StratServiceServer) ReturnAll(req *proto.ReturnAllReq, server proto.StratService_ReturnAllServer) error {
+func (s StratServiceServer) ReturnAll(_ *proto.ReturnAllReq, server proto.StratService_ReturnAllServer) error {
 	data := &StratItem{}
 	cursor, err := stratdb.Find(context.TODO(), bson.M{})
 	if err != nil {
