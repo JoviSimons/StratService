@@ -5,16 +5,19 @@ import (
 	"fmt"
 	"github.com/S-A-RB05/StratService/proto"
 	"go.mongodb.org/mongo-driver/bson"
+	_ "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"log"
 	"net"
 	"os"
 	"os/signal"
+	"time"
 )
 
 type StratServiceServer struct {
@@ -22,17 +25,21 @@ type StratServiceServer struct {
 }
 
 func (s StratServiceServer) ReturnAll(req *proto.ReturnAllReq, server proto.StratService_ReturnAllServer) error {
-	data := &StratItem{}
+	data := &StratItem{Created: &timestamppb.Timestamp{}}
+	fmt.Printf("Created field value before decoding: %v\n", data.Created)
+
 	cursor, err := stratdb.Find(context.Background(), bson.M{})
 	if err != nil {
 		return status.Errorf(codes.Internal, fmt.Sprintf("Unknown internal error: %v", err))
 	}
 	defer cursor.Close(context.Background())
 	for cursor.Next(context.Background()) {
-		err := cursor.Decode(data)
+		err := cursor.Decode(&data)
+		fmt.Printf("Created field value: %v\n", data.Created)
 		if err != nil {
-			return status.Errorf(codes.Unavailable, fmt.Sprintf("Could not decode data: %v", err))
+			return status.Errorf(codes.Internal, fmt.Sprintf("Could not decode data: %v", err))
 		}
+		fmt.Printf("Created field value2: %v\n", data.Created)
 		server.Send(&proto.ReturnAllRes{
 			Strategy: &proto.Strategy{
 				Name:    data.Name,
@@ -49,6 +56,7 @@ func (s StratServiceServer) ReturnAll(req *proto.ReturnAllReq, server proto.Stra
 }
 
 func (s StratServiceServer) ReturnStrat(ctx context.Context, req *proto.ReturnStratReq) (*proto.ReturnStratRes, error) {
+	fmt.Println("searching for strat with name " + req.Name)
 	result := stratdb.FindOne(ctx, bson.M{"_name": req.GetName()})
 	data := StratItem{}
 	if err := result.Decode(&data); err != nil {
@@ -65,15 +73,15 @@ func (s StratServiceServer) ReturnStrat(ctx context.Context, req *proto.ReturnSt
 	return response, nil
 }
 
-func (s StratServiceServer) StoreStrat(ctx context.Context, req *proto.StoreStratReq) (*proto.StoreStratRes, error) {
+func (s StratServiceServer) StoreStrat(_ context.Context, req *proto.StoreStratReq) (*proto.StoreStratRes, error) {
 	strategy := req.GetStrategy()
 	data := StratItem{
 		Name:    strategy.GetName(),
 		Mq:      strategy.GetMq(),
 		Ex:      strategy.GetEx(),
-		Created: strategy.GetCreated(),
+		Created: timestamppb.Now(),
 	}
-	err, _ := stratdb.InsertOne(mongoCtx, data)
+	_, err := stratdb.InsertOne(mongoCtx, data)
 	if err != nil {
 		return nil, status.Errorf(
 			codes.Internal,
@@ -84,11 +92,31 @@ func (s StratServiceServer) StoreStrat(ctx context.Context, req *proto.StoreStra
 }
 
 // StratItem pointer at timestamppb possibly a problem
+// timestamppb in general problematic due to decoding issues in returnall
 type StratItem struct {
 	Name    string                 `bson:"_name,omitempty"`
 	Mq      string                 `bson:"mq"`
 	Ex      string                 `bson:"ex"`
 	Created *timestamppb.Timestamp `bson:"created"`
+}
+
+func (s *StratItem) SetBSON(raw bson.Raw) error {
+	var decoded struct {
+		Name    string    `bson:"name"`
+		Mq      string    `bson:"mq"`
+		Ex      string    `bson:"ex"`
+		Created time.Time `bson:"created"`
+	}
+
+	err := bson.Unmarshal(raw, &decoded)
+	if err != nil {
+		return err
+	}
+
+	// convert the UTC datetime value of the "created" field to a timestamppb.Timestamp value
+	s.Created = timestamppb.New(decoded.Created.In(time.UTC))
+
+	return nil
 }
 
 var db *mongo.Client
@@ -109,33 +137,8 @@ func InitGRPC() {
 	s := grpc.NewServer(opts...)
 	srv := &StratServiceServer{}
 	proto.RegisterStratServiceServer(s, srv)
+	reflection.Register(s)
 
-	InitMongo()
-
-	// Start the server in a child routine
-	go func() {
-		if err := s.Serve(listener); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
-		}
-	}()
-	fmt.Println("Server succesfully started on port :50051")
-
-	c := make(chan os.Signal)
-	signal.Notify(c, os.Interrupt)
-
-	// Block main routine until a signal is received
-	// As long as user doesn't press CTRL+C a message is not passed and our main routine keeps running
-	<-c
-	// After receiving CTRL+C Properly stop the server
-	fmt.Println("\nStopping the server...")
-	s.Stop()
-	listener.Close()
-	fmt.Println("Closing MongoDB connection")
-	db.Disconnect(mongoCtx)
-	fmt.Println("Done.")
-}
-
-func InitMongo() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	// Initialize MongoDb client
 	fmt.Println("Connecting to MongoDB...")
@@ -161,4 +164,26 @@ func InitMongo() {
 
 	// Bind our collection to our global variable for use in other methods
 	stratdb = db.Database("testing").Collection("strategies")
+
+	// Start the server in a child routine
+	go func() {
+		if err := s.Serve(listener); err != nil {
+			log.Fatalf("Failed to serve: %v", err)
+		}
+	}()
+	fmt.Println("Server succesfully started on port :50051")
+
+	c := make(chan os.Signal)
+	signal.Notify(c, os.Interrupt)
+
+	// Block main routine until a signal is received
+	// As long as user doesn't press CTRL+C a message is not passed and our main routine keeps running
+	<-c
+	// After receiving CTRL+C Properly stop the server
+	fmt.Println("\nStopping the server...")
+	s.Stop()
+	listener.Close()
+	fmt.Println("Closing MongoDB connection")
+	db.Disconnect(mongoCtx)
+	fmt.Println("Done.")
 }
