@@ -25,27 +25,26 @@ type StratServiceServer struct {
 }
 
 func (s StratServiceServer) ReturnAll(req *proto.ReturnAllReq, server proto.StratService_ReturnAllServer) error {
-	data := &StratItem{Created: &timestamppb.Timestamp{}}
-	fmt.Printf("Created field value before decoding: %v\n", data.Created)
-
-	cursor, err := stratdb.Find(context.Background(), bson.M{})
+	data := &StratItem{}
+	cursor, err := stratdb.Find(context.TODO(), bson.M{})
 	if err != nil {
 		return status.Errorf(codes.Internal, fmt.Sprintf("Unknown internal error: %v", err))
 	}
-	defer cursor.Close(context.Background())
-	for cursor.Next(context.Background()) {
+	defer cursor.Close(context.TODO())
+	for cursor.Next(context.TODO()) {
 		err := cursor.Decode(&data)
-		fmt.Printf("Created field value: %v\n", data.Created)
 		if err != nil {
-			return status.Errorf(codes.Internal, fmt.Sprintf("Could not decode data: %v", err))
+			log.Printf("error decoding data: %v", err)
+			continue
+			//return status.Errorf(codes.Internal, fmt.Sprintf("Could not decode data: %v", err))
 		}
-		fmt.Printf("Created field value2: %v\n", data.Created)
+
 		server.Send(&proto.ReturnAllRes{
 			Strategy: &proto.Strategy{
 				Name:    data.Name,
 				Mq:      data.Mq,
 				Ex:      data.Ex,
-				Created: data.Created,
+				Created: timestamppb.New(data.Created),
 			},
 		})
 	}
@@ -67,7 +66,7 @@ func (s StratServiceServer) ReturnStrat(ctx context.Context, req *proto.ReturnSt
 			Name:    data.Name,
 			Mq:      data.Mq,
 			Ex:      data.Ex,
-			Created: data.Created,
+			Created: timestamppb.New(data.Created),
 		},
 	}
 	return response, nil
@@ -79,7 +78,7 @@ func (s StratServiceServer) StoreStrat(_ context.Context, req *proto.StoreStratR
 		Name:    strategy.GetName(),
 		Mq:      strategy.GetMq(),
 		Ex:      strategy.GetEx(),
-		Created: timestamppb.Now(),
+		Created: time.Now(),
 	}
 	_, err := stratdb.InsertOne(mongoCtx, data)
 	if err != nil {
@@ -91,32 +90,11 @@ func (s StratServiceServer) StoreStrat(_ context.Context, req *proto.StoreStratR
 	return &proto.StoreStratRes{Strategy: strategy}, nil
 }
 
-// StratItem pointer at timestamppb possibly a problem
-// timestamppb in general problematic due to decoding issues in returnall
 type StratItem struct {
-	Name    string                 `bson:"_name,omitempty"`
-	Mq      string                 `bson:"mq"`
-	Ex      string                 `bson:"ex"`
-	Created *timestamppb.Timestamp `bson:"created"`
-}
-
-func (s *StratItem) SetBSON(raw bson.Raw) error {
-	var decoded struct {
-		Name    string    `bson:"name"`
-		Mq      string    `bson:"mq"`
-		Ex      string    `bson:"ex"`
-		Created time.Time `bson:"created"`
-	}
-
-	err := bson.Unmarshal(raw, &decoded)
-	if err != nil {
-		return err
-	}
-
-	// convert the UTC datetime value of the "created" field to a timestamppb.Timestamp value
-	s.Created = timestamppb.New(decoded.Created.In(time.UTC))
-
-	return nil
+	Name    string    `bson:"_name,omitempty"`
+	Mq      string    `bson:"mq"`
+	Ex      string    `bson:"ex"`
+	Created time.Time `bson:"created"`
 }
 
 var db *mongo.Client
