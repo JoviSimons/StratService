@@ -1,9 +1,11 @@
 package main
 
 import (
-	"github.com/S-A-RB05/StratService/stratserver"
+	. "github.com/S-A-RB05/StratService/stratserver"
 )
 
+const grpcPort = "10000"
+
 func main() {
-	stratserver.InitGRPC()
+	InitGRPC(grpcPort)
 }

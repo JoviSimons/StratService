@@ -57,7 +57,7 @@ func (s StratServiceServer) ReturnAll(_ *pbstrat.ReturnAllReq, server pbstrat.St
 }
 
 func (s StratServiceServer) ReturnStrat(ctx context.Context, req *pbstrat.ReturnStratReq) (*pbstrat.ReturnStratRes, error) {
-	fmt.Println("searching for strat with name " + req.Name)
+	fmt.Println("searching for strat with name " + req.GetName())
 	result := stratdb.FindOne(ctx, bson.M{"_name": req.GetName()})
 	data := StratItem{}
 	if err := result.Decode(&data); err != nil {
@@ -113,12 +113,12 @@ var db *mongo.Client
 var stratdb *mongo.Collection
 var mongoCtx context.Context
 
-func InitGRPC() {
+func InitGRPC(port string) {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	fmt.Println("Starting server on port: 50051")
-	listener, err := net.Listen("tcp", ":50051")
+	fmt.Println("Starting server on port: " + port)
+	listener, err := net.Listen("tcp", ":"+port)
 	if err != nil {
-		log.Fatalf("Unable to listen on port :50051: %v", err)
+		log.Fatalf("Unable to listen on port :"+port+": %v", err)
 	}
 
 	// Set options, here we can configure things like TLS support
@@ -161,7 +161,7 @@ func InitGRPC() {
 			log.Fatalf("Failed to serve: %v", err)
 		}
 	}()
-	fmt.Println("Server succesfully started on port :50051")
+	fmt.Println("Server succesfully started on port :" + port)
 
 	c := make(chan os.Signal)
 	signal.Notify(c, os.Interrupt)
