@@ -3,8 +3,10 @@ package stratserver
 import (
 	"context"
 	"fmt"
-	"github.com/S-A-RB05/StratService/proto"
+	"github.com/S-A-RB05/StratService/messaging"
+	pbstrat "github.com/S-A-RB05/StratService/proto"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	_ "go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -21,10 +23,10 @@ import (
 )
 
 type StratServiceServer struct {
-	proto.UnimplementedStratServiceServer
+	pbstrat.UnimplementedStratServiceServer
 }
 
-func (s StratServiceServer) ReturnAll(_ *proto.ReturnAllReq, server proto.StratService_ReturnAllServer) error {
+func (s StratServiceServer) ReturnAll(_ *pbstrat.ReturnAllReq, server pbstrat.StratService_ReturnAllServer) error {
 	data := &StratItem{}
 	cursor, err := stratdb.Find(context.TODO(), bson.M{})
 	if err != nil {
@@ -39,8 +41,8 @@ func (s StratServiceServer) ReturnAll(_ *proto.ReturnAllReq, server proto.StratS
 			//return status.Errorf(codes.Internal, fmt.Sprintf("Could not decode data: %v", err))
 		}
 
-		server.Send(&proto.ReturnAllRes{
-			Strategy: &proto.Strategy{
+		server.Send(&pbstrat.ReturnAllRes{
+			Strategy: &pbstrat.Strategy{
 				Name:    data.Name,
 				Mq:      data.Mq,
 				Ex:      data.Ex,
@@ -54,15 +56,15 @@ func (s StratServiceServer) ReturnAll(_ *proto.ReturnAllReq, server proto.StratS
 	return nil
 }
 
-func (s StratServiceServer) ReturnStrat(ctx context.Context, req *proto.ReturnStratReq) (*proto.ReturnStratRes, error) {
+func (s StratServiceServer) ReturnStrat(ctx context.Context, req *pbstrat.ReturnStratReq) (*pbstrat.ReturnStratRes, error) {
 	fmt.Println("searching for strat with name " + req.Name)
 	result := stratdb.FindOne(ctx, bson.M{"_name": req.GetName()})
 	data := StratItem{}
 	if err := result.Decode(&data); err != nil {
 		return nil, status.Errorf(codes.NotFound, fmt.Sprintf("Could not find Strategy with name %s: %v", req.GetName(), err))
 	}
-	response := &proto.ReturnStratRes{
-		Strategy: &proto.Strategy{
+	response := &pbstrat.ReturnStratRes{
+		Strategy: &pbstrat.Strategy{
 			Name:    data.Name,
 			Mq:      data.Mq,
 			Ex:      data.Ex,
@@ -72,7 +74,7 @@ func (s StratServiceServer) ReturnStrat(ctx context.Context, req *proto.ReturnSt
 	return response, nil
 }
 
-func (s StratServiceServer) StoreStrat(_ context.Context, req *proto.StoreStratReq) (*proto.StoreStratRes, error) {
+func (s StratServiceServer) StoreStrat(_ context.Context, req *pbstrat.StoreStratReq) (*pbstrat.StoreStratRes, error) {
 	strategy := req.GetStrategy()
 	data := StratItem{
 		Name:    strategy.GetName(),
@@ -80,14 +82,24 @@ func (s StratServiceServer) StoreStrat(_ context.Context, req *proto.StoreStratR
 		Ex:      strategy.GetEx(),
 		Created: time.Now(),
 	}
-	_, err := stratdb.InsertOne(mongoCtx, data)
+	result, err := stratdb.InsertOne(mongoCtx, data)
 	if err != nil {
 		return nil, status.Errorf(
 			codes.Internal,
 			fmt.Sprintf("Internal error: %v", err),
 		)
 	}
-	return &proto.StoreStratRes{Strategy: strategy}, nil
+	objID := result.InsertedID.(primitive.ObjectID).Hex()
+	syncStrat := &pbstrat.SyncStrat{
+		Objectid: objID,
+		Name:     strategy.GetName(),
+		Ex:       strategy.GetEx(),
+		Created:  strategy.GetCreated(),
+	}
+	_syncStrat, err := bson.Marshal(syncStrat)
+	messaging.ProduceMessage(_syncStrat, "q.syncStrat")
+
+	return &pbstrat.StoreStratRes{Strategy: strategy}, nil
 }
 
 type StratItem struct {
@@ -114,7 +126,7 @@ func InitGRPC() {
 	// Create new gRPC server with (blank) options
 	s := grpc.NewServer(opts...)
 	srv := &StratServiceServer{}
-	proto.RegisterStratServiceServer(s, srv)
+	pbstrat.RegisterStratServiceServer(s, srv)
 	reflection.Register(s)
 
 	log.SetFlags(log.LstdFlags | log.Lshortfile)

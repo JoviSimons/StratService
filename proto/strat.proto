@@ -18,13 +18,12 @@ message Strategy{
   google.protobuf.Timestamp created = 5;
 }
 
-message StrategyRequest{
-  string id = 1;
+message SyncStrat{
+  string objectid = 1;
   string name = 2;
-  string ex = 3;
-  google.protobuf.Timestamp created = 4;
+  string ex = 4;
+  google.protobuf.Timestamp created = 5;
 }
-
 //return all strats
 message ReturnAllReq{}
 
