@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -55,6 +56,33 @@ func readAllStrats() (values []primitive.M) {
 
 	values = results
 	return
+}
+
+func SearchStrats(userid string) ([]primitive.M, error) {
+	userCollection := client.Database("testing").Collection("strategies")
+
+	// Create a filter to search for the document with the specified username
+	filter := bson.M{"userid": userid}
+
+	fmt.Println(userid)
+
+	// Find the first document that matches the filter
+	var results []bson.M
+	cursor, err := userCollection.Find(context.TODO(), filter)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, errors.New("no strategy found")
+		}
+		return nil, err
+	}
+
+	if err = cursor.All(context.TODO(), &results); err != nil {
+		panic(err)
+	}
+
+
+
+	return results, nil
 }
 
 func readSingleStrat(id string) (value primitive.M) {

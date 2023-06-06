@@ -56,6 +56,17 @@ func useStrat(w http.ResponseWriter, r *http.Request) {
 	//messaging.ProduceMessage(s.Mq, "strat_queue")
 }
 
+func getAllStratsOfUser(w http.ResponseWriter, r *http.Request) {
+	var useridParam string = mux.Vars(r)["userid"]
+	result, err := SearchStrats(useridParam)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		fmt.Println(err)
+		return
+	}
+	json.NewEncoder(w).Encode(result)
+}
+
 func handleRequests() {
 	myRouter := mux.NewRouter().StrictSlash(true)
 
@@ -66,6 +77,7 @@ func handleRequests() {
 	myRouter.HandleFunc("/get/{id}", returnStrat)
 	myRouter.HandleFunc("/use/{id}", useStrat)
 	myRouter.HandleFunc("/create", storeStrat)
+	myRouter.HandleFunc("/getall/{userid}", getAllStratsOfUser)
 
 	log.Fatal(http.ListenAndServe(":10000", myRouter))
 }
@@ -76,7 +88,6 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 	// parse the request body into a Strategy struct
 	var strat Strategy
 	err := json.NewDecoder(body).Decode(&strat)
-	fmt.Println(strat)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		fmt.Println(err)
