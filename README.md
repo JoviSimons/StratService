@@ -12,10 +12,18 @@ Example Response:
 ```
 [
   {
-    // Strategy 1 data
+    "_id": "645a46d8d9335b1665d85ef2",
+    "created": "2023-05-09T15:12:56.67+02:00",
+    "ex": "test",
+    "name": "test.ex5",
+    "userid": "n1BOnD9Ip2hk7Ua6XG83vrkqqxk1"
   },
   {
-    // Strategy 2 data
+    "_id": "645a46d8d9335b1665d85ef3",
+    "created": "2023-06-09T15:12:56.67+02:00",
+    "ex": "test1",
+    "name": "test1.ex5",
+    "userid": "n1BOnD9Ip2hk7Ua6XG83vrkqqxk1"
   },
 ]
 ```
@@ -30,9 +38,13 @@ id (string): The ID of the strategy to retrieve.
 
 Example Response:
 ```
-{
-  // Strategy data
-}
+  {
+    "_id": "645a46d8d9335b1665d85ef2",
+    "created": "2023-05-09T15:12:56.67+02:00",
+    "ex": "test",
+    "name": "test.ex5",
+    "userid": "n1BOnD9Ip2hk7Ua6XG83vrkqqxk1"
+  }
 ```
 ### Endpoint: Use Strategy
 - URL: /use/{id}
@@ -58,8 +70,11 @@ Example Response: None (prints the name of the strategy)
 Example Request Body:
 ```
 {
-  "name": "My Strategy",
-  // Other strategy properties
+    "id": "test",
+    "userId": "userID",
+    "name": "ExpertMACD",
+    "mq": "strat.mq5",
+    "ex": "strat.ex"
 }
 ```
 
@@ -67,6 +82,12 @@ Example Response: The ID of the newly created strategy.
 
 ## Running app
 
+Start the server by running the Go application in the terminal.
+
+```
+go run .
+``` 
+Remember to adjust the host and port (http.ListenAndServe(":10000", myRouter)) based on your deployment environment or preferred configuration.
 
 ## Code documentation
 
