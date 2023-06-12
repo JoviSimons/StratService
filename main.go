@@ -8,7 +8,6 @@ import (
 
 	"github.com/S-A-RB05/StratService/messaging"
 	"github.com/gorilla/mux"
-	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -33,29 +32,6 @@ func returnStrat(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(readSingleStrat(idParam))
 }
 
-func useStrat(w http.ResponseWriter, r *http.Request) {
-	// create a new Strategy object
-	s := Strategy{}
-
-	// retrieve the document with the specified _id and assign its values to the fields of the Strategy object
-	var idParam string = mux.Vars(r)["id"]
-	result := readSingleStrat(idParam)
-
-	resultBytes, err := bson.Marshal(result)
-	if err != nil {
-		panic(err)
-	}
-	err = bson.Unmarshal(resultBytes, &s)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println("USING STRAT:")
-	fmt.Println(s.Name)
-	// Send script using rabbitmq
-	//messaging.ProduceMessage(s.Mq, "strat_queue")
-}
-
 func getAllStratsOfUser(w http.ResponseWriter, r *http.Request) {
 	var useridParam string = mux.Vars(r)["userid"]
 	result, err := SearchStrats(useridParam)
@@ -75,7 +51,6 @@ func handleRequests() {
 	myRouter.HandleFunc("/", homePage)
 	myRouter.HandleFunc("/all", returnAll)
 	myRouter.HandleFunc("/get/{id}", returnStrat)
-	myRouter.HandleFunc("/use/{id}", useStrat)
 	myRouter.HandleFunc("/create", storeStrat)
 	myRouter.HandleFunc("/getall/{userid}", getAllStratsOfUser)
 
@@ -101,6 +76,12 @@ func storeStrat(w http.ResponseWriter, r *http.Request) {
 	sendStratToTestManager(strat_id, strat)
 }
 
+//service functions
+
+func getAllStrats() (values []primitive.M) {
+	return readAllStrats()
+}
+
 func sendStratToTestManager(id string, strat Strategy) {
 	var rStrat StrategyRequest
 
@@ -116,12 +97,6 @@ func sendStratToTestManager(id string, strat Strategy) {
 	}
 
 	messaging.ProduceMessage(bStrat, "q.syncStrat")
-}
-
-//service functions
-
-func getAllStrats() (values []primitive.M) {
-	return readAllStrats()
 }
 
 // other
